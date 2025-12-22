@@ -1,0 +1,15 @@
+# OpenTofu
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.tfvars
+
+# Credentials
+.envrc
+kubeconfig*
+*.kubeconfig
+
+# OS
+.DS_Store
