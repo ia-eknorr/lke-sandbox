@@ -26,30 +26,6 @@ Before creating these secrets, you must:
 
 ---
 
-### keycloak-db
-
-**Purpose**: Database credentials for Keycloak to connect to PGO PostgreSQL
-
-**When to create**: After PGO creates the keycloak user (during helmfile apply)
-
-**Format in Infisical** (JSON secret with properties):
-```json
-{
-  "user": "keycloak",
-  "password": "<password from pgo-pguser-keycloak secret>"
-}
-```
-
-**How to get the values**:
-```bash
-kubectl get secret pgo-pguser-keycloak -n pgo -o jsonpath='{.data.user}' | base64 -d
-kubectl get secret pgo-pguser-keycloak -n pgo -o jsonpath='{.data.password}' | base64 -d
-```
-
-**Used by**: Keycloak operator (via ExternalSecret → keycloak-db-secret)
-
----
-
 ### argocd-oidc-client-secret
 
 **Purpose**: OIDC client secret for ArgoCD to authenticate with Keycloak
@@ -61,6 +37,22 @@ kubectl get secret pgo-pguser-keycloak -n pgo -o jsonpath='{.data.password}' | b
 - Value: The client secret from Keycloak's `argocd` client configuration
 
 **Used by**: ArgoCD OIDC configuration (via ExternalSecret)
+
+---
+
+## Automated Secrets
+
+The following secrets are **automatically synced** and do not require manual creation:
+
+### keycloak-db (Automated)
+
+**How it works**: The Keycloak chart uses External-Secrets with the Kubernetes provider to read the PGO-generated `pgo-pguser-keycloak` secret directly from the `pgo` namespace. No manual step required!
+
+**Flow**:
+```
+PGO creates secret → Kubernetes SecretStore reads it → ExternalSecret syncs to keycloak namespace
+     (pgo ns)              (reads from pgo ns)              (keycloak ns)
+```
 
 ---
 
@@ -79,9 +71,8 @@ This enables the ClusterSecretStore to authenticate with Infisical.
 
 ## Local Secret Files
 
-The secret files in this directory (gitignored) contain the actual secret values extracted from the current cluster. Use these to populate Infisical:
+The secret files in this directory (gitignored) contain actual secret values for reference:
 
-- `CLOUDFLARE_API_TOKEN` - Cloudflare API token
-- `KEYCLOAK_DB` - Keycloak database credentials (JSON with user/password)
+- `CLOUDFLARE_API_TOKEN` - Cloudflare API token (store in Infisical)
 
 **Do not commit these files!** They are gitignored for a reason.

@@ -62,18 +62,13 @@ This deploys:
 
 ### Create Bootstrap Secrets
 
-Create these secrets in Infisical (see `bootstrap/secrets/README.md` for details):
+Create this secret in Infisical (see `bootstrap/secrets/README.md` for details):
 
-| Secret Name | Purpose | When to Create |
-|-------------|---------|----------------|
-| `cloudflare-api-token` | DNS-01 challenge for Let's Encrypt | During initial setup |
-| `keycloak-db` | Database credentials for Keycloak (JSON with user/password) | After PGO creates keycloak user |
+| Secret Name              | Purpose                             | When to Create       |
+|--------------------------|-------------------------------------|----------------------|
+| `cloudflare-api-token`   | DNS-01 challenge for Let's Encrypt  | During initial setup |
 
-To get the keycloak-db credentials from PGO:
-```bash
-kubectl get secret pgo-pguser-keycloak -n pgo -o jsonpath='{.data.user}' | base64 -d
-kubectl get secret pgo-pguser-keycloak -n pgo -o jsonpath='{.data.password}' | base64 -d
-```
+> **Note**: The `keycloak-db` credentials are **automatically synced** from PGO using the External-Secrets Kubernetes provider. No manual step required!
 
 ## Step 3: Activate External-Secrets
 

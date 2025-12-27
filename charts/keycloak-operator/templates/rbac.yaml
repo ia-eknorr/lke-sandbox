@@ -279,3 +279,45 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: keycloak-operator
+{{- if .Values.pgoSecretSync.enabled }}
+---
+# ServiceAccount for reading PGO secrets
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.pgoSecretSync.serviceAccountName | default "keycloak-pgo-reader" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+---
+# Role in pgo namespace to read the keycloak user secret
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keycloak-secret-reader
+  namespace: {{ .Values.pgoSecretSync.sourceNamespace | default "pgo" }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.pgoSecretSync.secretName | default "pgo-pguser-keycloak" }}"]
+    verbs: ["get"]
+---
+# RoleBinding granting the keycloak ServiceAccount access to read PGO secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keycloak-reads-pgo-secrets
+  namespace: {{ .Values.pgoSecretSync.sourceNamespace | default "pgo" }}
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+roleRef:
+  kind: Role
+  name: keycloak-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.pgoSecretSync.serviceAccountName | default "keycloak-pgo-reader" }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

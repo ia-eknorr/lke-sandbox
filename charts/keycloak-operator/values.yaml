@@ -24,13 +24,15 @@ db:
   # TODO: setup network policy (well, everywhere, but) to ensure access to PGO namespace where db is
   host: pgo-pgbouncer.pgo.svc
 
-# ExternalSecret for database credentials
-# Pulls from Infisical (store PGO-generated credentials there manually)
-externalSecret:
+# PGO Secret Sync - automatically syncs database credentials from PGO namespace
+# Uses External-Secrets Kubernetes provider to read directly from pgo-pguser-keycloak
+# No manual Infisical step required!
+pgoSecretSync:
   enabled: true
   refreshInterval: "1h"
-  secretStore:
-    name: infisical
-    kind: ClusterSecretStore
-  # Path in Infisical containing user and password properties
-  infisicalSecretPath: keycloak-db
+  # Namespace where PGO creates the user secret
+  sourceNamespace: pgo
+  # Name of the PGO-generated secret
+  secretName: pgo-pguser-keycloak
+  # ServiceAccount used to read secrets from pgo namespace
+  serviceAccountName: keycloak-pgo-reader
