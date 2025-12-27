@@ -1,0 +1,16 @@
+apiVersion: v2
+name: argocd
+description: ArgoCD for GitOps continuous delivery
+type: application
+version: 0.1.0
+appVersion: "2.10.0"
+
+dependencies:
+# Platform library for shared templates
+- name: platform-library
+  version: "0.1.0"
+  repository: "file://../../../charts/platform-library"
+# Upstream ArgoCD chart
+- name: argo-cd
+  version: 8.3.5
+  repository: https://argoproj.github.io/argo-helm

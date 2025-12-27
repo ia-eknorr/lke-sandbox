@@ -1,0 +1,10 @@
+ingress:
+  hostname: keycloak.sandbox.knorr.casa
+
+service:
+  annotations:
+    traefik.ingress.kubernetes.io/service.serverstransport: traefik-insecure-skip-verify@kubernetescrd
+
+certificate:
+  issuerName: letsencrypt-prod
+  issuerKind: ClusterIssuer

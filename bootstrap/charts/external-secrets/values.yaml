@@ -1,0 +1,37 @@
+external-secrets:
+  installCRDs: true
+
+  webhook:
+    port: 9443
+
+  certController:
+    requeueInterval: "5m"
+
+  serviceAccount:
+    create: true
+    name: external-secrets
+
+# Infisical Machine Identity credentials
+# Pass these via helm install --set to create the secret
+# Example: helm install external-secrets ./charts/external-secrets \
+#   --set infisical.clientId=<CLIENT_ID> \
+#   --set infisical.clientSecret=<CLIENT_SECRET>
+infisical:
+  clientId: ""
+  clientSecret: ""
+
+# ClusterSecretStore configuration for Infisical
+clusterSecretStore:
+  enabled: true
+  name: infisical
+
+  # Infisical instance URL
+  infisicalUrl: "https://infisical.sandbox.knorr.casa"
+
+  # Reference to secret containing Infisical credentials
+  # Created automatically when infisical.clientId and infisical.clientSecret are provided
+  secretRef:
+    name: infisical-machine-identity
+    namespace: external-secrets
+    clientIdKey: clientId
+    clientSecretKey: clientSecret

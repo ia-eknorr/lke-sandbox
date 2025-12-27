@@ -1,0 +1,36 @@
+# -- Operator Deployment replicas
+replicaCount: 1
+
+# -- Ingress customizations
+ingress:
+  # -- Enable Ingress for Keycloak
+  enabled: true
+  # -- Use IngressRouteTCP (Traefik) explicitly at the moment for TLS passthrough
+  useTraefik: true
+  # -- REQUIRED: Hostname to use for Ingress
+  # hostname: keycloak.localtest.me
+  # -- Ingress additional annotations
+  annotations: {}
+
+service:
+  annotations: {}
+
+certificate:
+  issuerName: letsencrypt-staging
+  issuerKind: ClusterIssuer
+
+db:
+  # expects a pgbouncer instance in the pgo namespace
+  # TODO: setup network policy (well, everywhere, but) to ensure access to PGO namespace where db is
+  host: pgo-pgbouncer.pgo.svc
+
+# ExternalSecret for database credentials
+# Pulls from Infisical (store PGO-generated credentials there manually)
+externalSecret:
+  enabled: true
+  refreshInterval: "1h"
+  secretStore:
+    name: infisical
+    kind: ClusterSecretStore
+  # Path in Infisical containing user and password properties
+  infisicalSecretPath: keycloak-db

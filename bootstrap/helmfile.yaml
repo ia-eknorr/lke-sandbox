@@ -1,0 +1,79 @@
+# Bootstrap Helmfile for LKE Sandbox
+#
+# Deploys the "secrets pipeline" that ArgoCD needs to function:
+#   pgo → infisical → external-secrets → argocd
+#
+# After this, ArgoCD manages everything else via GitOps (cert-manager,
+# traefik, trust-manager, keycloak) using Application manifests in apps/
+#
+# Usage:
+#   cd bootstrap && helmfile apply
+#
+# Post-deploy (see docs/BOOTSTRAP.md):
+#   1. Complete Infisical setup wizard
+#   2. Create Machine Identity for external-secrets
+#   3. Create K8s secret with Machine Identity credentials
+#   4. ClusterSecretStore becomes healthy → ArgoCD takes over
+
+repositories:
+  - name: argoproj
+    url: https://argoproj.github.io/argo-helm
+  - name: external-secrets
+    url: https://charts.external-secrets.io
+  - name: infisical
+    url: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
+
+helmDefaults:
+  wait: true
+  waitForJobs: true
+  timeout: 600
+  createNamespace: true
+
+hooks:
+  # Install Gateway API CRDs before any releases
+  # Required for Traefik Gateway provider (deployed by ArgoCD)
+  - events: ["presync"]
+    showlogs: true
+    command: kubectl
+    args:
+      - apply
+      - -f
+      - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+
+releases:
+  # Layer 1: Database Operator (required by Infisical)
+  - name: pgo
+    namespace: pgo
+    chart: ./charts/pgo
+    values:
+      - ./values/pgo/pgo/values.yaml
+
+  # Layer 2: Secrets Management
+  - name: infisical
+    namespace: infisical
+    chart: ./charts/infisical
+    needs:
+      - pgo/pgo
+    values:
+      - ./values/infisical/infisical/values.yaml
+
+  # Layer 3: External Secrets Operator
+  # ClusterSecretStore will be unhealthy until Infisical Machine Identity is configured
+  - name: external-secrets
+    namespace: external-secrets
+    chart: ./charts/external-secrets
+    needs:
+      - infisical/infisical
+    values:
+      - ./values/external-secrets/external-secrets/values.yaml
+
+  # Layer 4: GitOps Controller
+  # OIDC login will fail until Keycloak is deployed (by ArgoCD itself)
+  # Use admin password initially, OIDC self-heals once Keycloak is up
+  - name: argocd
+    namespace: argocd
+    chart: ./charts/argocd
+    needs:
+      - external-secrets/external-secrets
+    values:
+      - ./values/argocd/argocd/values.yaml

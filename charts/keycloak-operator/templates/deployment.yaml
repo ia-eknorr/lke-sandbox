@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    app.quarkus.io/quarkus-version: 3.20.2.1
+    app.quarkus.io/vcs-uri: https://github.com/keycloak/keycloak.git
+    app.quarkus.io/build-timestamp: 2025-08-20 - 10:19:29 +0000
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloak-operator
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak-operator
+  template:
+    metadata:
+      annotations:
+        app.quarkus.io/quarkus-version: 3.20.2.1
+        app.quarkus.io/vcs-uri: https://github.com/keycloak/keycloak.git
+        app.quarkus.io/build-timestamp: 2025-08-20 - 10:19:29 +0000
+      labels:
+        {{- include "keycloak.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - env:
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RELATED_IMAGE_KEYCLOAK
+              value: quay.io/keycloak/keycloak:26.3.3
+          image: quay.io/keycloak/keycloak-operator:26.3.3
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /q/health/live
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          name: keycloak-operator
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /q/health/ready
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          resources:
+            limits:
+              cpu: 700m
+              memory: 450Mi
+            requests:
+              cpu: 300m
+              memory: 450Mi
+          startupProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /q/health/started
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+      serviceAccountName: keycloak-operator

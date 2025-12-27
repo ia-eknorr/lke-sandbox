@@ -1,0 +1,34 @@
+{{/*
+Root Application (App of Apps pattern)
+Syncs Application manifests from the apps/ directory.
+Sync-waves in each Application control deployment order.
+*/}}
+{{- if .Values.appOfApps.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-apps
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    # Deploy after ArgoCD itself is ready
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.appOfApps.repoURL | quote }}
+    targetRevision: {{ .Values.appOfApps.targetRevision | default "main" }}
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+{{- end }}

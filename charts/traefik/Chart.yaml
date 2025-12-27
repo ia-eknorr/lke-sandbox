@@ -1,0 +1,11 @@
+apiVersion: v2
+name: traefik
+description: Traefik ingress controller with Gateway API support
+type: application
+version: 0.1.0
+appVersion: "3.6.5"
+
+dependencies:
+  - name: traefik
+    version: "38.0.1"
+    repository: "https://traefik.github.io/charts"

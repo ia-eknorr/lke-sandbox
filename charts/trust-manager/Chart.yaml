@@ -1,0 +1,10 @@
+apiVersion: v2
+name: trust-manager
+description: trust-manager for distributing CA certificates across namespaces
+type: application
+version: 0.1.0
+appVersion: "0.14.0"
+dependencies:
+  - name: trust-manager
+    version: "0.14.0"
+    repository: https://charts.jetstack.io

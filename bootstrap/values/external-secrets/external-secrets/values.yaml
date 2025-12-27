@@ -1,0 +1,3 @@
+# Sandbox external-secrets values
+clusterSecretStore:
+  infisicalUrl: https://infisical.sandbox.knorr.casa

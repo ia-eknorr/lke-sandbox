@@ -1,0 +1,9 @@
+dependencies:
+- name: platform-library
+  repository: file://../../../charts/platform-library
+  version: 0.1.0
+- name: argo-cd
+  repository: https://argoproj.github.io/argo-helm
+  version: 8.3.5
+digest: sha256:019691e42ce017a5458eaae562b41bff5145429f88e60dcc76767e638dd33442
+generated: "2025-12-25T21:16:05.49399-08:00"

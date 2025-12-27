@@ -1,0 +1,6 @@
+# Sandbox environment values for Infisical
+# Inherits defaults from chart values.yaml
+
+# HTTPRoute configuration (Gateway API)
+httpRoute:
+  hostname: infisical.sandbox.knorr.casa

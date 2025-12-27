@@ -1,0 +1,7 @@
+apiVersion: v2
+name: keycloak-operator
+description: Deploy the Keycloak Operator
+version: 1.0.0
+appVersion: 26.3.3
+type: application
+## ref: https://www.keycloak.org/operator/installation
