@@ -44,21 +44,52 @@ This deploys:
 
 ## Step 2: Configure Infisical
 
-### Initial Setup
+> **Important**: The public URL (`https://infisical.sandbox.knorr.casa`) is NOT accessible yet—Traefik and cert-manager are deployed by ArgoCD after ExternalSecrets is working. Use port-forward to access Infisical.
 
-1. Navigate to https://infisical.sandbox.knorr.casa
-2. Complete the setup wizard:
-   - Create admin account
-   - Create organization
-   - Create project (e.g., `platform-secrets`)
+### Access Infisical
+
+Auto-bootstrap has already created the admin user and organization. Just log in:
+
+1. Port-forward to access Infisical:
+   ```bash
+   kubectl port-forward svc/infisical-frontend -n infisical 8080:80
+   ```
+
+2. Navigate to http://localhost:8080
+
+3. Log in with bootstrap credentials:
+   - Email: `admin@knorr.casa`
+   - Password: `ChangeMe123!` (change this after login!)
+
+4. Create a project (e.g., name it "sandbox")
+   - Infisical auto-generates a slug like `sandbox-abc12`
+
+5. **Copy the project slug** and update the values file:
+   - Go to **Project Settings** → click **"Copy Project Slug"**
+   - Update `bootstrap/values/external-secrets/external-secrets/values.yaml`:
+     ```yaml
+     clusterSecretStore:
+       secretsScope:
+         projectSlug: "your-actual-slug"  # Paste the copied slug here
+         environmentSlug: "dev"           # Must match an environment in your project
+     ```
+   - Infisical creates `dev`, `staging`, `prod` environments by default
 
 ### Create Machine Identity
 
-1. Go to **Access Control → Machine Identities**
+1. Go to **Organization Settings → Access Control → Machine Identities**
 2. Create new identity: `external-secrets-operator`
-3. Add to your project with **Member** or **Admin** role
-4. Create authentication method: **Universal Auth**
+3. Add authentication method: **Universal Auth**
+4. Create a **Client Secret**
 5. Note the **Client ID** and **Client Secret**
+
+### Grant Machine Identity Access to Project
+
+> **Important**: The Machine Identity must be added to the project separately!
+
+1. Go to your **sandbox** project → **Project Settings** → **Access Control**
+2. Click **Add Member** → select **Machine Identity**
+3. Add `external-secrets-operator` with **Member** or **Admin** role
 
 ### Create Bootstrap Secrets
 
@@ -72,20 +103,27 @@ Create this secret in Infisical (see `bootstrap/secrets/README.md` for details):
 
 ## Step 3: Activate External-Secrets
 
-Create the Kubernetes secret with Machine Identity credentials:
+1. Create the Kubernetes secret with Machine Identity credentials:
 
-```bash
-kubectl create secret generic infisical-machine-identity \
-  -n external-secrets \
-  --from-literal=clientId=<YOUR_CLIENT_ID> \
-  --from-literal=clientSecret=<YOUR_CLIENT_SECRET>
-```
+   ```bash
+   kubectl create secret generic infisical-machine-identity \
+     -n external-secrets \
+     --from-literal=clientId=<YOUR_CLIENT_ID> \
+     --from-literal=clientSecret=<YOUR_CLIENT_SECRET>
+   ```
 
-Verify the ClusterSecretStore becomes healthy:
+2. Apply the updated values (with your project slug from Step 2.5):
 
-```bash
-kubectl get clustersecretstore infisical
-```
+   ```bash
+   cd bootstrap && helmfile -l name=external-secrets sync
+   ```
+
+3. Verify the ClusterSecretStore becomes healthy:
+
+   ```bash
+   kubectl get clustersecretstore infisical
+   # Should show: STATUS=Valid, READY=True
+   ```
 
 ## Step 4: GitOps Takes Over
 
@@ -105,6 +143,11 @@ kubectl get applications -n argocd
 # Watch platform apps sync
 argocd app list
 ```
+
+> **Note**: After traefik and cert-manager are healthy, public URLs become available:
+> - https://infisical.sandbox.knorr.casa
+> - https://argocd.sandbox.knorr.casa
+> - https://keycloak.sandbox.knorr.casa (after Wave 2)
 
 ## Step 5: Configure Keycloak (Post-Deploy)
 
@@ -133,11 +176,13 @@ ArgoCD's ExternalSecret will automatically sync the OIDC secret, and OIDC login 
 ## Verification Checklist
 
 - [ ] `helmfile apply` completed successfully
-- [ ] Infisical is accessible and configured
-- [ ] ClusterSecretStore is healthy: `kubectl get clustersecretstore`
+- [ ] Infisical auto-bootstrap completed (check: `kubectl get secret infisical-bootstrap-secret -n infisical`)
+- [ ] Logged into Infisical, created project and Machine Identity
+- [ ] Machine Identity secret created: `kubectl get secret infisical-machine-identity -n external-secrets`
+- [ ] ClusterSecretStore is healthy: `kubectl get clustersecretstore infisical`
 - [ ] All ArgoCD applications are synced: `argocd app list`
 - [ ] Wildcard certificate is issued: `kubectl get certificate -n traefik`
-- [ ] Keycloak is accessible
+- [ ] Public URLs accessible (infisical, argocd, keycloak)
 - [ ] ArgoCD OIDC login works (after Step 5)
 
 ## Disaster Recovery
@@ -158,6 +203,28 @@ kubectl exec -it pgo-instance1-xxxx -n pgo -- pgbackrest info
 3. Configure Infisical (Step 2) - or restore PGO database from backup
 4. Create Machine Identity secret (Step 3)
 5. ArgoCD will sync all applications automatically
+
+## Known LKE Limitations
+
+### External-Secrets Webhook Disabled
+
+**Issue**: LKE's managed Kubernetes control plane cannot reach ClusterIP services, which prevents admission webhooks from functioning. The External Secrets validating webhook times out when the API server tries to call it.
+
+**Resolution**: External-Secrets webhook is disabled in `bootstrap/charts/external-secrets/values.yaml`:
+
+```yaml
+external-secrets:
+  webhook:
+    create: false
+```
+
+This means ClusterSecretStore and ExternalSecret resources are not validated on creation. The trade-off is acceptable for a sandbox environment.
+
+### PgBouncer Routes to Replicas
+
+**Issue**: PGO's PgBouncer service may route connections to read replicas by default, causing "cannot execute UPDATE in a read-only transaction" errors.
+
+**Resolution**: Infisical connects directly to the PostgreSQL primary (`pgo-primary.pgo.svc`) instead of PgBouncer (`pgo-pgbouncer.pgo.svc`). This is configured in `bootstrap/charts/infisical/templates/secrets.yaml`.
 
 ## Troubleshooting
 
@@ -184,6 +251,31 @@ kubectl describe application platform-apps -n argocd
 ```
 
 Verify ArgoCD can access the git repository.
+
+### Infisical Pods CrashLoopBackOff
+
+If Infisical pods show "read-only transaction" errors:
+
+```bash
+kubectl logs -n infisical -l component=infisical --tail=20 | grep -i "read-only"
+```
+
+This indicates connection to a PostgreSQL replica instead of the primary. Verify the connection string:
+
+```bash
+kubectl get secret infisical-secrets -n infisical -o jsonpath='{.data.DB_CONNECTION_URI}' | base64 -d
+```
+
+The URI should contain `pgo-primary.pgo.svc`, not `pgo-pgbouncer.pgo.svc`. If incorrect, patch the secret:
+
+```bash
+# Get the correct primary URI
+kubectl get secret pgo-pguser-infisical -n pgo -o jsonpath='{.data.uri}' | base64 -d
+
+# Patch with primary connection (manually construct the base64-encoded value)
+# Then restart the deployment
+kubectl rollout restart deployment/infisical -n infisical
+```
 
 ### Cert-Manager Certificate Pending
 

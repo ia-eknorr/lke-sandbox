@@ -1,11 +1,16 @@
 external-secrets:
   installCRDs: true
 
+  # Disable webhook in LKE - the managed control plane cannot reach ClusterIP services
+  # This is a known limitation of Linode Kubernetes Engine
   webhook:
+    create: false
     port: 9443
 
+  # Disable cert-controller when webhook is disabled
+  # The cert-controller manages webhook TLS certs and has nothing to do without the webhook
   certController:
-    requeueInterval: "5m"
+    create: false
 
   serviceAccount:
     create: true
@@ -35,3 +40,9 @@ clusterSecretStore:
     namespace: external-secrets
     clientIdKey: clientId
     clientSecretKey: clientSecret
+
+  # Infisical secrets scope - which project/environment to fetch secrets from
+  secretsScope:
+    projectSlug: ""        # Set in environment values
+    environmentSlug: ""    # Set in environment values (e.g., "dev", "staging", "prod")
+    secretsPath: "/"       # Path within the project

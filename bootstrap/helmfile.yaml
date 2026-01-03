@@ -47,6 +47,19 @@ releases:
     chart: ./charts/pgo
     values:
       - ./values/pgo/pgo/values.yaml
+    hooks:
+      # Wait for PostgresCluster to be fully ready before dependent releases
+      # Helm's wait only waits for the operator, not the async database provisioning
+      - events: ["postsync"]
+        showlogs: true
+        command: kubectl
+        args:
+          - wait
+          - --for=condition=Ready
+          - postgrescluster/pgo
+          - -n
+          - pgo
+          - --timeout=300s
 
   # Layer 2: Secrets Management
   - name: infisical
@@ -64,6 +77,7 @@ releases:
     chart: ./charts/external-secrets
     needs:
       - infisical/infisical
+    wait: false  # ClusterSecretStore won't be ready until Machine Identity is configured manually
     values:
       - ./values/external-secrets/external-secrets/values.yaml
 

@@ -1,3 +1,8 @@
 # Sandbox external-secrets values
 clusterSecretStore:
-  infisicalUrl: https://infisical.sandbox.knorr.casa
+  # Use internal K8s service URL (not public URL) for bootstrap
+  # The public URL requires Traefik + cert-manager which are deployed AFTER external-secrets
+  infisicalUrl: http://infisical-upstream.infisical.svc:8080
+  secretsScope:
+    projectSlug: "sandbox-l5-mc"  # Infisical project slug - from Project Settings
+    environmentSlug: "dev"        # Environment within the project

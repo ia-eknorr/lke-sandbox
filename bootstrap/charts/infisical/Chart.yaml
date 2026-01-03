@@ -14,4 +14,4 @@ dependencies:
   - name: infisical-standalone
     version: "1.7.2"
     repository: "https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/"
-    alias: infisical
+    alias: upstream

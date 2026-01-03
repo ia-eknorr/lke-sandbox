@@ -4,3 +4,9 @@
 # HTTPRoute configuration (Gateway API)
 httpRoute:
   hostname: infisical.sandbox.knorr.casa
+
+# Bootstrap admin credentials for auto-bootstrap
+# These create the initial admin user - change password after first login!
+bootstrap:
+  adminEmail: "admin@knorr.casa"
+  adminPassword: "ChangeMe123!"
