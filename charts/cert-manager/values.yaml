@@ -7,6 +7,13 @@ cert-manager:
   prometheus:
     enabled: false
 
+  # Disable webhook in LKE - the managed control plane cannot reach ClusterIP services
+  # This is the same limitation that affects external-secrets webhook
+  webhook:
+    enabled: false
+  cainjector:
+    enabled: false
+
 # ExternalSecret for Cloudflare API token
 externalSecret:
   enabled: true
