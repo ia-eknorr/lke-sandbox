@@ -1,0 +1,13 @@
+# Sandbox cert-manager values
+clusterIssuer:
+  email: etknorr@gmail.com
+  dns01:
+    cloudflare:
+      email: etknorr@gmail.com
+
+certificate:
+  name: sandbox-wildcard
+  secretName: sandbox-wildcard-tls
+  dnsNames:
+    - sandbox.knorr.casa
+    - "*.sandbox.knorr.casa"

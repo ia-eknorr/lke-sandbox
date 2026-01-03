@@ -1,0 +1,3 @@
+# Sandbox ArgoCD values
+httpRoute:
+  hostname: argocd.sandbox.knorr.casa

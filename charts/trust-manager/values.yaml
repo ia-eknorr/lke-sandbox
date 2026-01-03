@@ -1,0 +1,15 @@
+# trust-manager configuration
+# Distributes CA certificates across namespaces using Bundle resources
+
+trust-manager:
+  app:
+    # Read source secrets/configmaps from pgo namespace
+    # This allows Bundle to access the PGO CA certificate
+    trust:
+      namespace: pgo
+    webhook:
+      tls:
+        # Use Helm-generated certificate instead of cert-manager
+        # This avoids the chicken-egg problem during initial bootstrap
+        helmCert:
+          enabled: true

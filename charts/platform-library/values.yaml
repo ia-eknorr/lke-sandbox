@@ -1,0 +1,25 @@
+# Default values for platform-library
+# These serve as documentation for expected values structure
+
+httpRoute:
+  enabled: false
+  hostname: ""           # Single hostname (string)
+  hostnames: []          # Multiple hostnames (array) - takes precedence
+  annotations: {}
+  gateway:
+    name: traefik-gateway
+    namespace: traefik
+  service:
+    name: ""             # Defaults to release name
+    port: 80
+  path: "/"
+  rules: []              # Custom rules (optional)
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+  service:
+    port: 80

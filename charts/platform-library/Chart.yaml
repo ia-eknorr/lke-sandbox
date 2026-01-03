@@ -1,0 +1,6 @@
+apiVersion: v2
+name: platform-library
+description: Shared Helm templates for the platform
+type: library
+version: 0.1.0
+appVersion: "1.0.0"

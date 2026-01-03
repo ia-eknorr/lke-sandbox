@@ -1,0 +1,42 @@
+cert-manager:
+  installCRDs: true
+
+  # For Gateway API integration
+  featureGates: "ExperimentalGatewayAPISupport=true"
+
+  prometheus:
+    enabled: false
+
+# ExternalSecret for Cloudflare API token
+externalSecret:
+  enabled: true
+  refreshInterval: "1h"
+  secretStore:
+    name: infisical
+    kind: ClusterSecretStore
+  infisicalSecretKey: cloudflare-api-token
+
+# ClusterIssuer configuration
+clusterIssuer:
+  enabled: true
+  name: letsencrypt-prod
+  email: ""  # Set in environment values
+  server: https://acme-v02.api.letsencrypt.org/directory
+  privateKeySecretRef: letsencrypt-prod-account-key
+
+  # DNS-01 solver configuration
+  dns01:
+    provider: cloudflare
+    cloudflare:
+      email: ""  # Set in environment values
+      apiTokenSecretRef:
+        name: cloudflare-api-token
+        key: api-token
+
+# Certificate configuration
+certificate:
+  enabled: true
+  name: ""  # Set in environment values
+  namespace: traefik
+  secretName: ""  # Set in environment values
+  dnsNames: []  # Set in environment values

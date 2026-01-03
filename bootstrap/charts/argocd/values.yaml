@@ -1,0 +1,81 @@
+argo-cd:
+  global:
+    domain: argocd.sandbox.knorr.casa
+
+  configs:
+    params:
+      server.insecure: true  # TLS terminated at gateway
+
+    cm:
+      url: https://argocd.sandbox.knorr.casa
+
+      # Enable Helm value files from outside chart directory
+      helm.valuesFileSchemes: >-
+        secrets+gpg-import, secrets+gpg-import-kubernetes,
+        secrets+age-import, secrets+age-import-kubernetes,
+        secrets, secrets+literal,
+        https, file
+
+      # OIDC configuration for Keycloak
+      # Client secret is pulled via ExternalSecret
+      oidc.config: |
+        name: Keycloak
+        issuer: https://keycloak.sandbox.knorr.casa/realms/sandbox
+        clientID: argocd
+        clientSecret: $oidc.keycloak.clientSecret
+        requestedScopes:
+          - openid
+          - profile
+          - email
+          - groups
+
+    rbac:
+      # Map Keycloak groups to ArgoCD roles
+      policy.csv: |
+        g, admin, role:admin
+        g, developers, role:readonly
+      policy.default: role:readonly
+
+  server:
+    # Disable upstream Ingress - we use HTTPRoute instead
+    ingress:
+      enabled: false
+
+    # Disable built-in certificate (using wildcard via Gateway)
+    certificate:
+      enabled: false
+
+  # Disable dex (using Keycloak directly)
+  dex:
+    enabled: false
+
+# HTTPRoute configuration (Gateway API)
+httpRoute:
+  enabled: true
+  hostname: ""  # Set in environment values
+  gateway:
+    name: traefik-gateway
+    namespace: traefik
+  service:
+    name: argocd-server
+    port: 80
+
+# OIDC via ExternalSecret (pulls client secret from Infisical)
+oidc:
+  enabled: true
+  secretStore:
+    name: infisical
+    kind: ClusterSecretStore
+  # Key in Infisical containing the Keycloak client secret
+  infisicalSecretKey: argocd-oidc-client-secret
+
+# Repository credentials (will be created via External Secrets)
+repoCredentials:
+  enabled: false  # Enable after Vault/ESO are running
+
+# App of Apps configuration
+# Deploys Application manifests from apps/ directory
+appOfApps:
+  enabled: true
+  repoURL: "https://github.com/ia-eknorr/lke-sandbox.git"
+  targetRevision: "main"

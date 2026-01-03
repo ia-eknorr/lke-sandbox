@@ -1,0 +1,48 @@
+external-secrets:
+  installCRDs: true
+
+  # Disable webhook in LKE - the managed control plane cannot reach ClusterIP services
+  # This is a known limitation of Linode Kubernetes Engine
+  webhook:
+    create: false
+    port: 9443
+
+  # Disable cert-controller when webhook is disabled
+  # The cert-controller manages webhook TLS certs and has nothing to do without the webhook
+  certController:
+    create: false
+
+  serviceAccount:
+    create: true
+    name: external-secrets
+
+# Infisical Machine Identity credentials
+# Pass these via helm install --set to create the secret
+# Example: helm install external-secrets ./charts/external-secrets \
+#   --set infisical.clientId=<CLIENT_ID> \
+#   --set infisical.clientSecret=<CLIENT_SECRET>
+infisical:
+  clientId: ""
+  clientSecret: ""
+
+# ClusterSecretStore configuration for Infisical
+clusterSecretStore:
+  enabled: true
+  name: infisical
+
+  # Infisical instance URL
+  infisicalUrl: "https://infisical.sandbox.knorr.casa"
+
+  # Reference to secret containing Infisical credentials
+  # Created automatically when infisical.clientId and infisical.clientSecret are provided
+  secretRef:
+    name: infisical-machine-identity
+    namespace: external-secrets
+    clientIdKey: clientId
+    clientSecretKey: clientSecret
+
+  # Infisical secrets scope - which project/environment to fetch secrets from
+  secretsScope:
+    projectSlug: ""        # Set in environment values
+    environmentSlug: ""    # Set in environment values (e.g., "dev", "staging", "prod")
+    secretsPath: "/"       # Path within the project

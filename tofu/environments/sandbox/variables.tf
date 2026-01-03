@@ -25,7 +25,7 @@ variable "node_type" {
 variable "node_count" {
   description = "Number of nodes"
   type        = number
-  default     = 2
+  default     = 3
 }
 
 variable "tags" {

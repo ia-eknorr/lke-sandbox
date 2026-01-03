@@ -1,0 +1,57 @@
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloak
+spec:
+  db:
+    # Use custom JDBC URL with SSL settings for PGO's self-signed CA
+    # sslmode=require encrypts, sslfactory skips CA verification (sandbox only)
+    url: jdbc:postgresql://{{ required "Must supply db host!" .Values.db.host }}:5432/keycloak?sslmode=require&sslfactory=org.postgresql.ssl.NonValidatingFactory
+    passwordSecret:
+      key: password
+      name: keycloak-db-secret
+    usernameSecret:
+      key: user
+      name: keycloak-db-secret
+    vendor: postgres
+  hostname:
+    hostname: {{ required "Must supply ingress hostname!" .Values.ingress.hostname }}
+  http:
+    # Let Traefik handle TLS termination (edge proxy mode)
+    httpEnabled: true
+    {{- with .Values.service.annotations }}
+    annotations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  ingress:
+    {{- if .Values.ingress.enabled }}
+    enabled: {{ .Values.ingress.useTraefik | ternary false true }}
+    {{- else }}
+    enabled: false
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    annotations:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  instances: 2
+  proxy:
+    headers: xforwarded
+  resources:
+    limits:
+      cpu: 2
+      memory: 1500Mi
+    requests:
+      cpu: 1200m
+      memory: 896Mi
+  scheduling:
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: keycloak
+          topologyKey: topology.kubernetes.io/zone

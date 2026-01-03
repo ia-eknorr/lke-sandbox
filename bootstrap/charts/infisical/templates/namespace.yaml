@@ -1,0 +1,8 @@
+# Namespace with label for trust-manager CA distribution
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    # Enable PGO CA certificate distribution via trust-manager
+    pgo-ca-trust: "enabled"

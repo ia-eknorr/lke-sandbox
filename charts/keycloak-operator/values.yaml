@@ -1,0 +1,38 @@
+# -- Operator Deployment replicas
+replicaCount: 1
+
+# -- Ingress customizations
+ingress:
+  # -- Enable Ingress for Keycloak
+  enabled: true
+  # -- Use IngressRouteTCP (Traefik) explicitly at the moment for TLS passthrough
+  useTraefik: true
+  # -- REQUIRED: Hostname to use for Ingress
+  # hostname: keycloak.localtest.me
+  # -- Ingress additional annotations
+  annotations: {}
+
+service:
+  annotations: {}
+
+certificate:
+  issuerName: letsencrypt-staging
+  issuerKind: ClusterIssuer
+
+db:
+  # expects a pgbouncer instance in the pgo namespace
+  # TODO: setup network policy (well, everywhere, but) to ensure access to PGO namespace where db is
+  host: pgo-pgbouncer.pgo.svc
+
+# PGO Secret Sync - automatically syncs database credentials from PGO namespace
+# Uses External-Secrets Kubernetes provider to read directly from pgo-pguser-keycloak
+# No manual Infisical step required!
+pgoSecretSync:
+  enabled: true
+  refreshInterval: "1h"
+  # Namespace where PGO creates the user secret
+  sourceNamespace: pgo
+  # Name of the PGO-generated secret
+  secretName: pgo-pguser-keycloak
+  # ServiceAccount used to read secrets from pgo namespace
+  serviceAccountName: keycloak-pgo-reader

@@ -1,0 +1,2 @@
+{{/* Use the shared HTTPRoute template from platform-library */}}
+{{ include "platform.httproute" . }}

@@ -1,0 +1,9 @@
+dependencies:
+- name: platform-library
+  repository: file://../../../charts/platform-library
+  version: 0.1.0
+- name: infisical-standalone
+  repository: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
+  version: 1.7.2
+digest: sha256:58e445f513f3aecc8ba738d96c766a9f62d36849997ea061efda1488f409a25d
+generated: "2026-01-02T21:58:20.028561-08:00"

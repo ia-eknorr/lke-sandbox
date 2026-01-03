@@ -1,0 +1,43 @@
+{{/*
+Root Application (App of Apps pattern)
+Syncs Application manifests from the apps/ directory.
+Sync-waves in each Application control deployment order.
+
+NOTE: Uses post-install hook to defer creation until after ArgoCD CRDs
+are installed by the argo-cd subchart. This avoids Helm's "validate
+before apply" issue where it checks CRDs exist before applying anything.
+*/}}
+{{- if .Values.appOfApps.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-apps
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    # Defer creation until after argo-cd (and its CRDs) are installed
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"
+    # Keep the resource after hook completes
+    helm.sh/resource-policy: keep
+    # ArgoCD sync ordering (after ArgoCD itself is ready)
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.appOfApps.repoURL | quote }}
+    targetRevision: {{ .Values.appOfApps.targetRevision | default "main" }}
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+{{- end }}

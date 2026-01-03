@@ -63,14 +63,33 @@ resource "linode_firewall" "this" {
     ipv4     = ["192.168.128.0/17"]
   }
 
+  # Allow all TCP on private network (pod-to-pod cross-node traffic)
+  inbound {
+    label    = "allow-private-tcp"
+    action   = "ACCEPT"
+    protocol = "TCP"
+    ports    = "1-65535"
+    ipv4     = ["192.168.128.0/17"]
+  }
+
+  # Allow Calico IPENCAP (IP-in-IP) for pod networking across nodes
+  inbound {
+    label    = "allow-calico-ipip"
+    action   = "ACCEPT"
+    protocol = "IPENCAP"
+    ipv4     = ["192.168.128.0/17"]
+  }
+
 # Allow webhook callbacks from LKE control plane
+  # LKE control plane IPs are not disclosed, so we allow all TCP for webhook ports
+  # See: https://www.linode.com/community/questions/24953/cert-manager-problem-with-webhook-io-timeout
   inbound {
     label    = "allow-webhooks"
     action   = "ACCEPT"
     protocol = "TCP"
-    ports    = "8443,9443,10250,10260"
+    ports    = "1-65535"
     ipv4     = ["0.0.0.0/0"]
-}
+  }
 
   # Allow all outbound
   outbound_policy = "ACCEPT"

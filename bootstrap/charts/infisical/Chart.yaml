@@ -1,0 +1,17 @@
+apiVersion: v2
+name: infisical
+description: Self-hosted Infisical secrets management platform
+type: application
+version: 0.1.0
+appVersion: "0.154.6"
+
+dependencies:
+  # Platform library for shared templates (HTTPRoute, labels, etc.)
+  - name: platform-library
+    version: "0.1.0"
+    repository: "file://../../../charts/platform-library"
+  # Upstream Infisical chart
+  - name: infisical-standalone
+    version: "1.7.2"
+    repository: "https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/"
+    alias: upstream

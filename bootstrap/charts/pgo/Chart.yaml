@@ -1,0 +1,10 @@
+apiVersion: v2
+name: pgo
+description: Deploy the PGO Postgres Operator
+version: 1.0.0
+appVersion: 5.8.2
+type: application
+dependencies:
+- name: pgo
+  version: 5.8.2
+  repository: oci://registry.developers.crunchydata.com/crunchydata
