@@ -1,2 +1,9 @@
 pgo:
   replicas: 1
+
+# Storage configuration - override per cloud provider
+storage:
+  # LKE: linode-block-storage-retain
+  # DOKS: do-block-storage-retain
+  # EKS: gp3 (or similar)
+  className: linode-block-storage-retain

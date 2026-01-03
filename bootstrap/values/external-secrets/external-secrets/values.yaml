@@ -4,5 +4,5 @@ clusterSecretStore:
   # The public URL requires Traefik + cert-manager which are deployed AFTER external-secrets
   infisicalUrl: http://infisical-upstream.infisical.svc:8080
   secretsScope:
-    projectSlug: "sandbox-l5-mc"  # Infisical project slug - from Project Settings
+    projectSlug: "sandbox-lpk-i"  # Infisical project slug - from Project Settings
     environmentSlug: "dev"        # Environment within the project

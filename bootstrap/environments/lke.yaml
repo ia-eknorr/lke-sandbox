@@ -1,0 +1,5 @@
+# LKE (Linode Kubernetes Engine) environment values
+cloud: lke
+domain: sandbox.knorr.casa
+suffix: ""  # argocd.sandbox.knorr.casa
+storageClass: linode-block-storage-retain

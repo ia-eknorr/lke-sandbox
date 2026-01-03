@@ -5,9 +5,12 @@ clusterIssuer:
     cloudflare:
       email: etknorr@gmail.com
 
+# Certificate with both LKE and DO domains (shared wildcard)
 certificate:
   name: sandbox-wildcard
   secretName: sandbox-wildcard-tls
   dnsNames:
     - sandbox.knorr.casa
     - "*.sandbox.knorr.casa"
+    - sandbox-do.knorr.casa
+    - "*.sandbox-do.knorr.casa"

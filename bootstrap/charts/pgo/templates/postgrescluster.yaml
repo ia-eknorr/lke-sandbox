@@ -27,7 +27,7 @@ spec:
             resources:
               requests:
                 storage: 20Gi
-            storageClassName: linode-block-storage-retain
+            storageClassName: {{ .Values.storage.className }}
   instances:
   - affinity:
       podAntiAffinity:
@@ -43,7 +43,7 @@ spec:
       resources:
         requests:
           storage: 3Gi
-      storageClassName: linode-block-storage-retain
+      storageClassName: {{ .Values.storage.className }}
     name: instance1
     replicas: 2
     walVolumeClaimSpec:
@@ -52,7 +52,7 @@ spec:
       resources:
         requests:
           storage: 3Gi
-      storageClassName: linode-block-storage-retain
+      storageClassName: {{ .Values.storage.className }}
   port: 5432
   postgresVersion: 16
   proxy:
