@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: infisical-provisioner
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-weight: "14"  # After bootstrap job (10), before provision-eso (15)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: infisical-provisioner
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-weight: "14"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets", "namespaces"]
+    verbs: ["create", "get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: infisical-provisioner
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-weight: "14"
+subjects:
+  - kind: ServiceAccount
+    name: infisical-provisioner
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: infisical-provisioner
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: provision-eso
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-weight: "15"  # After bootstrap job (weight 10)
+    helm.sh/hook-delete-policy: hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      serviceAccountName: infisical-provisioner
+      restartPolicy: OnFailure
+      volumes:
+        - name: bootstrap-secrets
+          secret:
+            secretName: infisical-bootstrap-secrets
+            optional: true  # Don't fail if no secrets to upload
+      initContainers:
+        - name: wait
+          image: curlimages/curl:8.5.0
+          command: [sh, -c, 'until curl -sf $URL/api/status; do sleep 3; done']
+          env:
+            - name: URL
+              value: http://{{ .Release.Name }}-upstream.{{ .Release.Namespace }}.svc:8080
+      containers:
+        - name: provision
+          image: alpine:3.19
+          volumeMounts:
+            - name: bootstrap-secrets
+              mountPath: /bootstrap-secrets
+              readOnly: true
+          command: [sh, -c]
+          args:
+            - |
+              apk add --no-cache curl jq kubectl
+              
+              # Create project
+              P=$(curl -sf -X POST $URL/api/v2/workspace \
+                -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+                -d '{"projectName":"sandbox","slug":"sandbox","type":"secret-manager"}')
+              PID=$(echo "$P" | jq -r '.project.id')
+              echo "Created project: $PID"
+
+              # Create Machine Identity for External Secrets Operator
+              I=$(curl -sf -X POST $URL/api/v1/identities \
+                -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+                -d "{\"name\":\"external-secrets-operator\",\"organizationId\":\"$ORG_ID\",\"role\":\"member\"}")
+              IID=$(echo "$I" | jq -r '.identity.id')
+              echo "Created identity: $IID"
+
+              # Setup Universal Auth + get credentials
+              UA=$(curl -sf -X POST $URL/api/v1/auth/universal-auth/identities/$IID \
+                -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+                -d '{"accessTokenTTL":7200,"accessTokenMaxTTL":86400,"accessTokenNumUsesLimit":0}')
+              CID=$(echo "$UA" | jq -r '.identityUniversalAuth.clientId')
+              echo "Created Universal Auth clientId: $CID"
+
+              CS=$(curl -sf -X POST $URL/api/v1/auth/universal-auth/identities/$IID/client-secrets \
+                -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+                -d '{"description":"external-secrets-operator","ttl":0,"numUsesLimit":0}')
+              CSECRET=$(echo "$CS" | jq -r '.clientSecret')
+
+              # Add identity to project with member role (read access to secrets)
+              curl -sf -X POST $URL/api/v2/workspace/$PID/identity-memberships/$IID \
+                -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+                -d '{"role":"member"}'
+              echo "Added identity to project"
+
+              # Upload bootstrap secrets to Infisical project
+              if [ -f /bootstrap-secrets/cloudflare-api-token ]; then
+                CF_TOKEN=$(cat /bootstrap-secrets/cloudflare-api-token)
+                curl -sf -X POST "$URL/api/v3/secrets/raw/cloudflare-api-token" \
+                  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+                  -d "{\"workspaceId\":\"$PID\",\"environment\":\"dev\",\"secretPath\":\"/\",\"secretValue\":\"$CF_TOKEN\",\"type\":\"shared\"}"
+                echo "Uploaded cloudflare-api-token to Infisical"
+              fi
+
+              # Create namespace if needed & create secret for ClusterSecretStore
+              kubectl create ns external-secrets --dry-run=client -o yaml | kubectl apply -f -
+              kubectl create secret generic infisical-machine-identity \
+                -n external-secrets \
+                --from-literal=clientId=$CID \
+                --from-literal=clientSecret=$CSECRET \
+                --dry-run=client -o yaml | kubectl apply -f -
+
+              echo "Done: Machine Identity created and secret stored"
+          env:
+            - name: URL
+              value: http://{{ .Release.Name }}-upstream.{{ .Release.Namespace }}.svc:8080
+            - name: TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: infisical-bootstrap-output
+                  key: token
+            - name: ORG_ID
+              valueFrom:
+                secretKeyRef:
+                  name: infisical-bootstrap-output
+                  key: organizationId

@@ -176,7 +176,7 @@ ArgoCD's ExternalSecret will automatically sync the OIDC secret, and OIDC login 
 ## Verification Checklist
 
 - [ ] `helmfile apply` completed successfully
-- [ ] Infisical auto-bootstrap completed (check: `kubectl get secret infisical-bootstrap-secret -n infisical`)
+- [ ] Infisical auto-bootstrap completed (check: `kubectl get secret infisical-bootstrap-output -n infisical`)
 - [ ] Logged into Infisical, created project and Machine Identity
 - [ ] Machine Identity secret created: `kubectl get secret infisical-machine-identity -n external-secrets`
 - [ ] ClusterSecretStore is healthy: `kubectl get clustersecretstore infisical`

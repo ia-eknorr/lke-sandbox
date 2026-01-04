@@ -69,7 +69,7 @@ releases:
         command: kubectl
         args:
           - wait
-          - --for=condition=Ready
+          - --for=condition=ProxyAvailable
           - postgrescluster/pgo
           - -n
           - pgo
@@ -86,12 +86,19 @@ releases:
       # Environment-specific hostname (e.g., infisical-do.sandbox.knorr.casa)
       - httpRoute:
           hostname: infisical{{ .Values.suffix }}.{{ .Values.domain }}
+      # Bootstrap secrets: read from local files and upload to Infisical
+      # These are uploaded by the provision-eso job after project creation
+      - bootstrapSecrets:
+          cloudflareApiToken: {{ readFile "secrets/CLOUDFLARE_API_TOKEN" | trim | quote }}
 
   # Layer 3: External Secrets Operator
   # ClusterSecretStore uses helm.sh/hook: post-install,post-upgrade to defer until CRDs exist
   - name: external-secrets
     namespace: external-secrets
     chart: ./charts/external-secrets
+    # Disable wait - helm's --wait hangs on some managed K8s clusters (DOKS)
+    # The `needs:` directive already ensures infisical is deployed first
+    wait: false
     needs:
       - infisical/infisical
     values:
@@ -103,6 +110,8 @@ releases:
   - name: argocd
     namespace: argocd
     chart: ./charts/argocd
+    # Disable wait - helm's --wait hangs on some managed K8s clusters (DOKS)
+    wait: false
     needs:
       - external-secrets/external-secrets
     values:
