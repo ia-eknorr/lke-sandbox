@@ -1,5 +1,5 @@
 # Environment-specific domain (override per cluster)
-domain: sandbox.knorr.casa
+domain: sandbox-do.knorr.casa
 
 # Traefik Helm values for Gateway API mode
 traefik:
