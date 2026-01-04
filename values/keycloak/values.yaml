@@ -1,5 +1,5 @@
 ingress:
-  hostname: keycloak.sandbox.knorr.casa
+  hostname: keycloak.sandbox-do.knorr.casa
 
 service:
   annotations:

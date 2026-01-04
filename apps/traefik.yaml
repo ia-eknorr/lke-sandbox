@@ -17,7 +17,7 @@ spec:
       # Override domain per cluster - set via bootstrap or ApplicationSet
       # Default is sandbox.knorr.casa (LKE), override to sandbox-do.knorr.casa for DO
       valuesObject:
-        domain: sandbox.knorr.casa
+        domain: sandbox-do.knorr.casa
   destination:
     server: https://kubernetes.default.svc
     namespace: traefik
