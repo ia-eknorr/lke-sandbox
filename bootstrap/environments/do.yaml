@@ -1,0 +1,5 @@
+# DO (DigitalOcean Kubernetes) environment values
+cloud: do
+domain: sandbox-do.knorr.casa
+suffix: ""
+storageClass: do-block-storage-retain

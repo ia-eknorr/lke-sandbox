@@ -1,4 +1,4 @@
-# Bootstrap Helmfile for LKE Sandbox
+# Bootstrap Helmfile for Kubernetes Sandbox
 #
 # Deploys the "secrets pipeline" that ArgoCD needs to function:
 #   pgo → infisical → external-secrets → argocd
@@ -7,13 +7,24 @@
 # traefik, trust-manager, keycloak) using Application manifests in apps/
 #
 # Usage:
-#   cd bootstrap && helmfile apply
+#   cd bootstrap && helmfile -e lke apply   # Linode (default)
+#   cd bootstrap && helmfile -e do apply    # DigitalOcean
 #
 # Post-deploy (see docs/BOOTSTRAP.md):
 #   1. Complete Infisical setup wizard
 #   2. Create Machine Identity for external-secrets
 #   3. Create K8s secret with Machine Identity credentials
 #   4. ClusterSecretStore becomes healthy → ArgoCD takes over
+
+environments:
+  lke:
+    values:
+      - environments/lke.yaml
+  do:
+    values:
+      - environments/do.yaml
+
+---
 
 repositories:
   - name: argoproj
@@ -47,6 +58,9 @@ releases:
     chart: ./charts/pgo
     values:
       - ./values/pgo/pgo/values.yaml
+      # Environment-specific storage class
+      - storage:
+          className: {{ .Values.storageClass }}
     hooks:
       # Wait for PostgresCluster to be fully ready before dependent releases
       # Helm's wait only waits for the operator, not the async database provisioning
@@ -55,7 +69,7 @@ releases:
         command: kubectl
         args:
           - wait
-          - --for=condition=Ready
+          - --for=condition=ProxyAvailable
           - postgrescluster/pgo
           - -n
           - pgo
@@ -69,15 +83,24 @@ releases:
       - pgo/pgo
     values:
       - ./values/infisical/infisical/values.yaml
+      # Environment-specific hostname (e.g., infisical-do.sandbox.knorr.casa)
+      - httpRoute:
+          hostname: infisical{{ .Values.suffix }}.{{ .Values.domain }}
+      # Bootstrap secrets: read from local files and upload to Infisical
+      # These are uploaded by the provision-eso job after project creation
+      - bootstrapSecrets:
+          cloudflareApiToken: {{ readFile "secrets/CLOUDFLARE_API_TOKEN" | trim | quote }}
 
   # Layer 3: External Secrets Operator
-  # ClusterSecretStore will be unhealthy until Infisical Machine Identity is configured
+  # ClusterSecretStore uses helm.sh/hook: post-install,post-upgrade to defer until CRDs exist
   - name: external-secrets
     namespace: external-secrets
     chart: ./charts/external-secrets
+    # Disable wait - helm's --wait hangs on some managed K8s clusters (DOKS)
+    # The `needs:` directive already ensures infisical is deployed first
+    wait: false
     needs:
       - infisical/infisical
-    wait: false  # ClusterSecretStore won't be ready until Machine Identity is configured manually
     values:
       - ./values/external-secrets/external-secrets/values.yaml
 
@@ -87,7 +110,28 @@ releases:
   - name: argocd
     namespace: argocd
     chart: ./charts/argocd
+    # Disable wait - helm's --wait hangs on some managed K8s clusters (DOKS)
+    wait: false
     needs:
       - external-secrets/external-secrets
     values:
       - ./values/argocd/argocd/values.yaml
+      # Environment-specific hostnames (e.g., argocd-do.sandbox.knorr.casa)
+      - httpRoute:
+          hostname: argocd{{ .Values.suffix }}.{{ .Values.domain }}
+        argo-cd:
+          global:
+            domain: argocd{{ .Values.suffix }}.{{ .Values.domain }}
+          configs:
+            cm:
+              url: https://argocd{{ .Values.suffix }}.{{ .Values.domain }}
+              oidc.config: |
+                name: Keycloak
+                issuer: https://keycloak{{ .Values.suffix }}.{{ .Values.domain }}/realms/sandbox
+                clientID: argocd
+                clientSecret: $oidc.keycloak.clientSecret
+                requestedScopes:
+                  - openid
+                  - profile
+                  - email
+                  - groups

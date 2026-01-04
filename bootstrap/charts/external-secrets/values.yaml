@@ -26,12 +26,13 @@ infisical:
   clientSecret: ""
 
 # ClusterSecretStore configuration for Infisical
+# Uses helm.sh/hook: post-install,post-upgrade to defer until CRDs exist
 clusterSecretStore:
   enabled: true
   name: infisical
 
-  # Infisical instance URL
-  infisicalUrl: "https://infisical.sandbox.knorr.casa"
+  # Internal service URL (external-secrets runs in-cluster)
+  infisicalUrl: "http://infisical-upstream.infisical.svc.cluster.local:8080"
 
   # Reference to secret containing Infisical credentials
   # Created automatically when infisical.clientId and infisical.clientSecret are provided

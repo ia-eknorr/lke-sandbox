@@ -41,10 +41,11 @@ upstream:
     autoBootstrap:
       enabled: true
       organization: "Knorr"
-      # Store bootstrap token (useful for debugging, not used by External Secrets)
-      secretTemplate: '{"data":{"token":"{{.Identity.Credentials.Token}}","identityId":"{{.Identity.ID}}","orgId":"{{.Organization.ID}}"}}'
+      # Store bootstrap token for provision-eso job
+      # Must be single-line JSON since it's passed as CLI arg to infisical bootstrap
+      secretTemplate: '{"data":{"token":"{{ .Identity.Credentials.Token }}","organizationId":"{{ .Organization.ID }}","organizationSlug":"{{ .Organization.Slug }}","adminEmail":"{{ .User.Email }}","identityId":"{{ .Identity.ID }}"}}'
       secretDestination:
-        name: infisical-bootstrap-secret
+        name: infisical-bootstrap-output
         namespace: infisical
       # Reference to secret with INFISICAL_ADMIN_EMAIL and INFISICAL_ADMIN_PASSWORD
       credentialSecret:
@@ -65,3 +66,9 @@ httpRoute:
   service:
     name: infisical
     port: 8080
+
+# Bootstrap secrets to upload to Infisical project
+# Values are injected by helmfile via readFile from bootstrap/secrets/
+# The provision-eso job uploads these to Infisical after project creation
+bootstrapSecrets:
+  cloudflareApiToken: ""  # Populated by helmfile readFile
