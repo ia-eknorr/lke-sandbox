@@ -64,7 +64,7 @@ httpRoute:
     name: traefik-gateway
     namespace: traefik
   service:
-    name: infisical
+    name: infisical-upstream
     port: 8080
 
 # Bootstrap secrets to upload to Infisical project
