@@ -81,7 +81,7 @@ spec:
         defaultClientScopes:
           - groups
 
-    # Users with temporary passwords (substituted by Keycloak at import time)
+    # Users with passwords (substituted by Keycloak at import time)
     # Retrieve passwords: kubectl get secret keycloak-user-passwords -n keycloak -o jsonpath='{.data.admin-password}' | base64 -d
     users:
       - username: admin
@@ -95,7 +95,7 @@ spec:
         credentials:
           - type: password
             value: "${ADMIN_PASSWORD}"
-            temporary: true
+            temporary: false
 
       - username: developer
         email: developer@{{ .Values.realmImport.domain }}
@@ -108,5 +108,5 @@ spec:
         credentials:
           - type: password
             value: "${DEVELOPER_PASSWORD}"
-            temporary: true
+            temporary: false
 {{- end }}
