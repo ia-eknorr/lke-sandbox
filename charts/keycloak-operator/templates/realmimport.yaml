@@ -1,14 +1,13 @@
 {{- if .Values.realmImport.enabled }}
 {{- /*
-  Lookup secrets at Helm render time for direct substitution.
-  This avoids relying on Keycloak's placeholder substitution which requires
-  -Dkeycloak.migration.replace-placeholders=true (not enabled by operator).
+  Using Keycloak Operator's native placeholder substitution.
+
+  The operator reads secrets at import time and substitutes ${PLACEHOLDER} values.
+  This avoids Helm lookup issues with ArgoCD (repo-server has no cluster access).
 
   Passwords are stored in keycloak-user-passwords secret - retrieve with:
     kubectl get secret keycloak-user-passwords -n keycloak -o jsonpath='{.data.admin-password}' | base64 -d
 */ -}}
-{{- $clientSecrets := lookup "v1" "Secret" .Release.Namespace "keycloak-client-secrets" }}
-{{- $userPasswords := lookup "v1" "Secret" .Release.Namespace "keycloak-user-passwords" }}
 apiVersion: k8s.keycloak.org/v2alpha1
 kind: KeycloakRealmImport
 metadata:
@@ -20,6 +19,22 @@ metadata:
     argocd.argoproj.io/sync-wave: "2"
 spec:
   keycloakCRName: keycloak
+
+  # Placeholder substitution - Keycloak reads these secrets at import time
+  placeholders:
+    ARGOCD_CLIENT_SECRET:
+      secret:
+        name: keycloak-client-secrets
+        key: argocd-client-secret
+    ADMIN_PASSWORD:
+      secret:
+        name: keycloak-user-passwords
+        key: admin-password
+    DEVELOPER_PASSWORD:
+      secret:
+        name: keycloak-user-passwords
+        key: developer-password
+
   realm:
     realm: {{ .Values.realmImport.realmName }}
     enabled: true
@@ -55,12 +70,7 @@ spec:
         enabled: true
         publicClient: false
         clientAuthenticatorType: client-secret
-        {{- if $clientSecrets }}
-        secret: {{ index $clientSecrets.data "argocd-client-secret" | b64dec | quote }}
-        {{- else }}
-        # Fallback: secrets not yet created (first install) - will be updated on next sync
-        secret: {{ randAlphaNum 32 | quote }}
-        {{- end }}
+        secret: "${ARGOCD_CLIENT_SECRET}"
         redirectUris:
           - "https://argocd.{{ .Values.realmImport.domain }}/auth/callback"
         webOrigins:
@@ -71,7 +81,7 @@ spec:
         defaultClientScopes:
           - groups
 
-    # Users with temporary passwords (substituted at Helm render time)
+    # Users with temporary passwords (substituted by Keycloak at import time)
     # Retrieve passwords: kubectl get secret keycloak-user-passwords -n keycloak -o jsonpath='{.data.admin-password}' | base64 -d
     users:
       - username: admin
@@ -84,12 +94,7 @@ spec:
           - admin
         credentials:
           - type: password
-            {{- if $userPasswords }}
-            value: {{ index $userPasswords.data "admin-password" | b64dec | quote }}
-            {{- else }}
-            # Fallback: random password for first install - check keycloak-user-passwords secret after sync
-            value: {{ randAlphaNum 16 | quote }}
-            {{- end }}
+            value: "${ADMIN_PASSWORD}"
             temporary: true
 
       - username: developer
@@ -102,11 +107,6 @@ spec:
           - developers
         credentials:
           - type: password
-            {{- if $userPasswords }}
-            value: {{ index $userPasswords.data "developer-password" | b64dec | quote }}
-            {{- else }}
-            # Fallback: random password for first install - check keycloak-user-passwords secret after sync
-            value: {{ randAlphaNum 16 | quote }}
-            {{- end }}
+            value: "${DEVELOPER_PASSWORD}"
             temporary: true
 {{- end }}
