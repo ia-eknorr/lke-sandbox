@@ -1,14 +1,10 @@
-# Environment-specific domain (override per cluster)
 domain: sandbox-do.knorr.casa
 
-# Traefik Helm values for Gateway API mode
 traefik:
-  # Enable Gateway API provider
   providers:
     kubernetesGateway:
       enabled: true
 
-  # Disable default IngressRoute provider (using Gateway API instead)
   ingressRoute:
     dashboard:
       enabled: false
@@ -20,14 +16,12 @@ traefik:
   service:
     type: LoadBalancer
     annotations:
-      # Linode-specific annotations (optional)
       service.beta.kubernetes.io/linode-loadbalancer-throttle: "4"
 
-  # Gateway is managed via templates/gateway.yaml for domain parameterization
+  # Gateway managed via templates/gateway.yaml for domain parameterization
   gateway:
     enabled: false
 
-  # Entry points
   ports:
     traefik:
       port: 9000
@@ -43,18 +37,16 @@ traefik:
         entryPoint:
           to: websecure
           scheme: https
-          permanent: true   
+          permanent: true
     websecure:
       port: 8443
       exposedPort: 443
       protocol: TCP
 
-  # Enable access logs (optional, helpful for debugging)
   logs:
     access:
       enabled: true
 
-  # Resource limits
   resources:
     requests:
       cpu: "100m"
@@ -63,6 +55,5 @@ traefik:
       cpu: "500m"
       memory: "256Mi"
 
-  # Dashboard HTTPRoute is managed via templates/dashboard-route.yaml
   additionalArguments:
   - "--api.insecure=true"

@@ -1,4 +1,3 @@
-# Sandbox cert-manager values
 clusterIssuer:
   email: etknorr@gmail.com
   dns01:
