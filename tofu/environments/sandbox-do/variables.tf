@@ -19,7 +19,7 @@ variable "k8s_version" {
 variable "node_type" {
   description = "DigitalOcean droplet size for nodes"
   type        = string
-  default     = "s-2vcpu-4gb"  # 4GB RAM, equivalent to LKE g6-standard-2
+  default     = "s-4vcpu-8gb"
 }
 
 variable "node_count" {
