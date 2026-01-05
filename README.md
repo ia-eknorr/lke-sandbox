@@ -211,11 +211,18 @@ sequenceDiagram
 
 See the `docs/` directory for detailed guides:
 
+### Getting Started
 - [Prerequisites](docs/01-prerequisites.md) - Tools and tokens setup
 - [LKE Cluster](docs/02-lke-cluster.md) - Infrastructure provisioning
 - [Firewall](docs/03-firewall.md) - Security configuration
 - [Platform](docs/04-platform.md) - cert-manager and Traefik setup
-- [Golden Pathway](docs/GOLDEN-PATHWAY.md) - Architecture philosophy
+- [Bootstrap Guide](docs/BOOTSTRAP.md) - Secrets-first GitOps deployment
+
+### Reference
+- [Architecture](docs/ARCHITECTURE.md) - Component architecture and design decisions
+- [Configuration](docs/CONFIGURATION.md) - All variables, settings, and options
+- [Golden Pathway](docs/GOLDEN-PATHWAY.md) - Three-layer architecture philosophy
+- [Operations](docs/OPERATIONS.md) - Day-2 operations and troubleshooting
 
 ## License
 
