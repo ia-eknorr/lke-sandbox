@@ -100,29 +100,56 @@ Public URLs become available after Traefik and cert-manager are healthy:
 - https://infisical.sandbox.knorr.casa
 - https://keycloak.sandbox.knorr.casa
 
-## Step 5: Configure Keycloak (Optional)
+## Step 5: Keycloak OIDC (Automatic)
 
-If you want OIDC authentication for ArgoCD:
+Keycloak realm, clients, and users are **automatically provisioned** via `KeycloakRealmImport`.
 
-### Get Keycloak Admin Credentials
+### What Gets Created
+
+| Resource | Details |
+|----------|---------|
+| Realm | `sandbox` |
+| Client | `argocd` (OIDC for ArgoCD login) |
+| Groups | `admin`, `developers` |
+| Users | `admin` (admin group), `developer` (developers group) |
+
+### ArgoCD OIDC Integration
+
+ArgoCD's ExternalSecret syncs the client secret directly from keycloak namespace (no Infisical round-trip). Group-based RBAC maps:
+- `admin` group → ArgoCD `role:admin`
+- `developers` group → ArgoCD `role:readonly`
+
+### Verify Realm Import
+
+```bash
+# Check KeycloakRealmImport status
+kubectl get keycloakrealmimport -n keycloak
+# STATUS should be "Done"
+
+# Verify secrets were created
+kubectl get secret keycloak-client-secrets keycloak-user-passwords -n keycloak
+```
+
+### User Credentials
+
+Get the temporary passwords (users must reset on first login):
+
+```bash
+# Admin user
+echo "Password: $(kubectl get secret keycloak-user-passwords -n keycloak -o jsonpath='{.data.admin-password}' | base64 -d)"
+
+# Developer user
+echo "Password: $(kubectl get secret keycloak-user-passwords -n keycloak -o jsonpath='{.data.developer-password}' | base64 -d)"
+```
+
+### Keycloak Admin Access
+
+For realm administration, use the initial admin credentials:
 
 ```bash
 echo "Username: $(kubectl get secret keycloak-initial-admin -n keycloak -o jsonpath='{.data.username}' | base64 -d)"
 echo "Password: $(kubectl get secret keycloak-initial-admin -n keycloak -o jsonpath='{.data.password}' | base64 -d)"
 ```
-
-### Create ArgoCD OIDC Client
-
-1. Log in at https://keycloak.sandbox.knorr.casa
-2. Create realm: `sandbox`
-3. Create client:
-   - Client ID: `argocd`
-   - Client authentication: ON
-   - Valid redirect URIs: `https://argocd.sandbox.knorr.casa/auth/callback`
-4. Copy the client secret from Credentials tab
-5. Store in Infisical as `argocd-oidc-client-secret`
-
-ArgoCD's ExternalSecret syncs the OIDC secret automatically.
 
 ## Accessing Services Before Traefik
 
@@ -160,6 +187,8 @@ kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.pas
 - [ ] ClusterSecretStore healthy: `kubectl get clustersecretstore infisical`
 - [ ] ArgoCD applications synced: `kubectl get applications -n argocd`
 - [ ] Certificate issued: `kubectl get certificate -n traefik`
+- [ ] KeycloakRealmImport complete: `kubectl get keycloakrealmimport -n keycloak`
+- [ ] ArgoCD OIDC login works (test with admin user)
 - [ ] Public URLs accessible
 
 ## Troubleshooting

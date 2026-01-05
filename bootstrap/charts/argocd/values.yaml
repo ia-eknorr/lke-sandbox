@@ -60,14 +60,10 @@ httpRoute:
     name: argocd-server
     port: 80
 
-# OIDC via ExternalSecret (pulls client secret from Infisical)
+# OIDC via ExternalSecret (pulls client secret directly from keycloak namespace)
+# Uses Kubernetes provider SecretStore - no Infisical round-trip needed
 oidc:
   enabled: true
-  secretStore:
-    name: infisical
-    kind: ClusterSecretStore
-  # Key in Infisical containing the Keycloak client secret
-  infisicalSecretKey: argocd-oidc-client-secret
 
 # Repository credentials (will be created via External Secrets)
 repoCredentials:

@@ -36,3 +36,14 @@ pgoSecretSync:
   secretName: pgo-pguser-keycloak
   # ServiceAccount used to read secrets from pgo namespace
   serviceAccountName: keycloak-pgo-reader
+
+# Realm Import - automatically provisions realm, clients, and users via KeycloakRealmImport CR
+# Uses placeholder substitution to inject secrets at import time
+realmImport:
+  enabled: false  # Enable in environment values
+
+  realmName: sandbox
+  displayName: "Sandbox Realm"
+
+  # Domain for redirect URIs and user emails (set in environment values)
+  # domain: sandbox-do.knorr.casa

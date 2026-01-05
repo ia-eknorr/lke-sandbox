@@ -8,3 +8,7 @@ service:
 certificate:
   issuerName: letsencrypt-prod
   issuerKind: ClusterIssuer
+
+realmImport:
+  enabled: true
+  domain: sandbox-do.knorr.casa
