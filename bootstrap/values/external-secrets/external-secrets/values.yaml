@@ -1,8 +1,6 @@
-# Sandbox external-secrets values
 clusterSecretStore:
-  # Use internal K8s service URL (not public URL) for bootstrap
-  # The public URL requires Traefik + cert-manager which are deployed AFTER external-secrets
+  # Use internal URL - public URL requires Traefik + cert-manager which deploy AFTER external-secrets
   infisicalUrl: http://infisical-upstream.infisical.svc:8080
   secretsScope:
-    projectSlug: "sandbox"  # Created by provision-eso job
-    environmentSlug: "dev"  # Default environment in new projects
+    projectSlug: "sandbox"
+    environmentSlug: "dev"

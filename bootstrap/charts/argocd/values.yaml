@@ -16,8 +16,7 @@ argo-cd:
         secrets, secrets+literal,
         https, file
 
-      # OIDC configuration for Keycloak
-      # Client secret is pulled via ExternalSecret
+      # Client secret pulled via ExternalSecret from Infisical
       oidc.config: |
         name: Keycloak
         issuer: https://keycloak.sandbox.knorr.casa/realms/sandbox
@@ -37,22 +36,18 @@ argo-cd:
       policy.default: role:readonly
 
   server:
-    # Disable upstream Ingress - we use HTTPRoute instead
     ingress:
-      enabled: false
+      enabled: false  # Use HTTPRoute
 
-    # Disable built-in certificate (using wildcard via Gateway)
     certificate:
-      enabled: false
+      enabled: false  # Using wildcard via Gateway
 
-  # Disable dex (using Keycloak directly)
   dex:
-    enabled: false
+    enabled: false  # Using Keycloak
 
-# HTTPRoute configuration (Gateway API)
 httpRoute:
   enabled: true
-  hostname: ""  # Set in environment values
+  hostname: ""
   gateway:
     name: traefik-gateway
     namespace: traefik
@@ -60,21 +55,16 @@ httpRoute:
     name: argocd-server
     port: 80
 
-# OIDC via ExternalSecret (pulls client secret from Infisical)
 oidc:
   enabled: true
   secretStore:
     name: infisical
     kind: ClusterSecretStore
-  # Key in Infisical containing the Keycloak client secret
   infisicalSecretKey: argocd-oidc-client-secret
 
-# Repository credentials (will be created via External Secrets)
 repoCredentials:
-  enabled: false  # Enable after Vault/ESO are running
+  enabled: false
 
-# App of Apps configuration
-# Deploys Application manifests from apps/ directory
 appOfApps:
   enabled: true
   repoURL: "https://github.com/ia-eknorr/lke-sandbox.git"

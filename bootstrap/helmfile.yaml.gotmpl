@@ -9,12 +9,6 @@
 # Usage:
 #   cd bootstrap && helmfile -e lke apply   # Linode (default)
 #   cd bootstrap && helmfile -e do apply    # DigitalOcean
-#
-# Post-deploy (see docs/BOOTSTRAP.md):
-#   1. Complete Infisical setup wizard
-#   2. Create Machine Identity for external-secrets
-#   3. Create K8s secret with Machine Identity credentials
-#   4. ClusterSecretStore becomes healthy → ArgoCD takes over
 
 environments:
   lke:
@@ -41,8 +35,7 @@ helmDefaults:
   createNamespace: true
 
 hooks:
-  # Install Gateway API CRDs before any releases
-  # Required for Traefik Gateway provider (deployed by ArgoCD)
+  # Gateway API CRDs required for Traefik Gateway provider
   - events: ["presync"]
     showlogs: true
     command: kubectl
@@ -52,18 +45,16 @@ hooks:
       - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
 
 releases:
-  # Layer 1: Database Operator (required by Infisical)
+  # Layer 1: Database Operator
   - name: pgo
     namespace: pgo
     chart: ./charts/pgo
     values:
       - ./values/pgo/pgo/values.yaml
-      # Environment-specific storage class
       - storage:
           className: {{ .Values.storageClass }}
     hooks:
-      # Wait for PostgresCluster to be fully ready before dependent releases
-      # Helm's wait only waits for the operator, not the async database provisioning
+      # Wait for PostgresCluster - Helm's wait only covers the operator, not async database provisioning
       - events: ["postsync"]
         showlogs: true
         command: kubectl
@@ -83,21 +74,17 @@ releases:
       - pgo/pgo
     values:
       - ./values/infisical/infisical/values.yaml
-      # Environment-specific hostname (e.g., infisical-do.sandbox.knorr.casa)
       - httpRoute:
           hostname: infisical{{ .Values.suffix }}.{{ .Values.domain }}
-      # Bootstrap secrets: read from local files and upload to Infisical
-      # These are uploaded by the provision-eso job after project creation
       - bootstrapSecrets:
           cloudflareApiToken: {{ readFile "secrets/CLOUDFLARE_API_TOKEN" | trim | quote }}
 
   # Layer 3: External Secrets Operator
-  # ClusterSecretStore uses helm.sh/hook: post-install,post-upgrade to defer until CRDs exist
+  # ClusterSecretStore uses helm.sh/hook to defer until CRDs exist
   - name: external-secrets
     namespace: external-secrets
     chart: ./charts/external-secrets
     # Disable wait - helm's --wait hangs on some managed K8s clusters (DOKS)
-    # The `needs:` directive already ensures infisical is deployed first
     wait: false
     needs:
       - infisical/infisical
@@ -110,13 +97,11 @@ releases:
   - name: argocd
     namespace: argocd
     chart: ./charts/argocd
-    # Disable wait - helm's --wait hangs on some managed K8s clusters (DOKS)
     wait: false
     needs:
       - external-secrets/external-secrets
     values:
       - ./values/argocd/argocd/values.yaml
-      # Environment-specific hostnames (e.g., argocd-do.sandbox.knorr.casa)
       - httpRoute:
           hostname: argocd{{ .Values.suffix }}.{{ .Values.domain }}
         argo-cd:
